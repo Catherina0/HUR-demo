@@ -9,7 +9,7 @@ class OTPValidator {
             // 如果元素初始化成功，再绑定事件
             this.bindEvents();
             this.initializeScanner();
-            this.qrUpdateInterval = null;
+            this.startOTPUpdateTimer();
         } catch (error) {
             console.error('构造函数执行出错:', error);
             throw error; // 向上传递错误
@@ -101,8 +101,7 @@ class OTPValidator {
             if (this.generateQRBtn) {
                 this.generateQRBtn.addEventListener('click', () => {
                     console.log('点击生成二维码按钮');
-                    // 先生成 OTP，然后生成二维码
-                    this.generateOTP();
+                    // 直接生成二维码，因为 OTP 已经存在
                     this.generateQRCode();
                 });
                 console.log('成功绑定二维码生成按钮');
@@ -227,7 +226,8 @@ class OTPValidator {
             }
 
             const epoch = Math.floor(Date.now() / 1000);
-            const time = Math.floor(epoch / 30);
+            // OTP时间间隔 10 秒
+            const time = Math.floor(epoch / 10);
             const timeHex = this.dec2hex(time);
             
             console.log('当前时间戳:', epoch);
@@ -248,6 +248,10 @@ class OTPValidator {
                 
                 this.otpCodeSpan.textContent = otp.toString().padStart(6, '0');
                 console.log('生成的 OTP:', this.otpCodeSpan.textContent);
+
+                // 自动更新二维码
+                this.generateQRCode();
+                
             } catch (error) {
                 console.error('OTP 计算错误:', error);
                 throw error;
@@ -265,18 +269,11 @@ class OTPValidator {
                 throw new Error('QRCode 库未加载，请确保已引入 qrcode.min.js');
             }
 
-            // 先检查是否有 OTP，如果没有就先生成
-            if (!this.otpCodeSpan.textContent) {
-                console.log('OTP 不存在，先生成 OTP');
-                this.generateOTP();
-            }
-
             const otp = this.otpCodeSpan.textContent;
             console.log('generateQRCode - 使用的 OTP:', otp);
             
             if (!otp) {
                 console.error('generateQRCode - OTP 为空');
-                alert('无法生成 OTP！');
                 return;
             }
 
@@ -343,11 +340,10 @@ class OTPValidator {
                 console.log('二维码生成过程启动');
             } catch (error) {
                 console.error('二维码生成失败:', error);
-                alert('二维码生成失败！');
+                console.error(error);
             }
         } catch (error) {
             console.error('generateQRCode 执行出错:', error);
-            alert('二维码生成失败：' + error.message);
         }
     }
 
@@ -618,11 +614,83 @@ class OTPValidator {
         }
     }
 
-    // 在组件销毁时清理定时器
+    startOTPUpdateTimer() {
+        try {
+            console.log('启动 OTP 更新计时器');
+            
+            // 立即生成一次 OTP
+            if (this.secretKeyInput.value) {
+                this.generateOTP();
+            }
+
+            // 计算到下一个整10秒的延迟
+            const now = new Date();
+            const delay = 10000 - (now.getSeconds() % 10) * 1000 - now.getMilliseconds();
+            
+            // 设置首次更新的定时器
+            setTimeout(() => {
+                // 在整10秒时更新 OTP
+                if (this.secretKeyInput.value) {
+                    this.generateOTP();
+                }
+                
+                // 之后每10秒更新一次
+                this.otpTimer = setInterval(() => {
+                    if (this.secretKeyInput.value) {
+                        this.generateOTP();
+                    }
+                }, 10000);
+            }, delay);
+
+            // 更新倒计时的定时器（每秒更新）
+            this.countdownTimer = setInterval(() => {
+                const now = new Date();
+                const remaining = 10 - (now.getSeconds() % 10);
+                this.updateCountdown(remaining);
+            }, 1000);
+
+            console.log('OTP 更新计时器启动成功');
+        } catch (error) {
+            console.error('启动 OTP 更新计时器时出错:', error);
+        }
+    }
+
+    updateCountdown(seconds) {
+        try {
+            // 获取或创建倒计时显示元素
+            let countdownSpan = document.getElementById('otpCountdown');
+            if (!countdownSpan) {
+                countdownSpan = document.createElement('span');
+                countdownSpan.id = 'otpCountdown';
+                this.otpCodeSpan.parentNode.appendChild(document.createTextNode(' ('));
+                this.otpCodeSpan.parentNode.appendChild(countdownSpan);
+                this.otpCodeSpan.parentNode.appendChild(document.createTextNode('s)'));
+            }
+            
+            // 更新倒计时显示
+            countdownSpan.textContent = seconds;
+        } catch (error) {
+            console.error('更新倒计时显示时出错:', error);
+        }
+    }
+
+    // 修改销毁方法，清理所有定时器
     destroy() {
-        if (this.qrUpdateInterval) {
-            console.log('清理定时器');
-            clearInterval(this.qrUpdateInterval);
+        try {
+            console.log('清理资源');
+            if (this.otpTimer) {
+                clearInterval(this.otpTimer);
+                this.otpTimer = null;
+                console.log('OTP 更新计时器已清理');
+            }
+            if (this.countdownTimer) {
+                clearInterval(this.countdownTimer);
+                this.countdownTimer = null;
+                console.log('倒计时定时器已清理');
+            }
+            // ... 其他清理代码 ...
+        } catch (error) {
+            console.error('清理资源时出错:', error);
         }
     }
 }
