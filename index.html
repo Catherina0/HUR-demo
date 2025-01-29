@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP 验证器</title>
+    
+    <!-- 确保 QRCode 库在 app.js 之前加载 -->
+    <script src="js/lib/qrcode.min.js"></script>
+    <script src="js/lib/html5-qrcode.min.js"></script>
+    <script src="js/lib/sha.js"></script>
+    
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+
+</head>
+<body>
+    <div class="container">
+        <h1>OTP 验证器</h1>
+        
+        <!-- 原始密钥生成部分 -->
+        <div class="secret-section">
+            <button id="generateRawSecret">生成原始密钥</button>
+            <div class="secret-display" id="rawSecretDisplay" style="display: none;">
+                原始密钥: <span id="rawSecret" class="raw-secret"></span>
+                <button class="copy-btn" id="copyRawSecret">复制</button>
+            </div>
+        </div>
+
+        <!-- OTP 输入和生成部分 -->
+        <div class="input-section">
+            <input type="text" id="secretKey" placeholder="输入 Base32 格式的密钥">
+            <button id="generateOTP">生成 OTP</button>
+            <button id="generateQR">生成二维码</button>
+        </div>
+
+        <div class="display-section">
+            <div id="otpDisplay">当前 OTP: <span id="otpCode"></span></div>
+            <div id="qrCanvas" class="qr-container"></div>
+        </div>
+
+        <div class="scanner-section">
+            <div id="reader"></div>
+            <div id="scanResult"></div>
+        </div>
+    </div>
+</body>
+</html> 
