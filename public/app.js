@@ -101,7 +101,8 @@ class OTPValidator {
             if (this.generateQRBtn) {
                 this.generateQRBtn.addEventListener('click', () => {
                     console.log('点击生成二维码按钮');
-                    // 直接生成二维码，因为 OTP 已经存在
+                    // 先生成新的 OTP，然后生成二维码
+                    this.generateOTP();
                     this.generateQRCode();
                 });
                 console.log('成功绑定二维码生成按钮');
@@ -690,6 +691,8 @@ class OTPValidator {
         try {
             // 获取或创建倒计时显示元素
             let countdownSpan = document.getElementById('otpCountdown');
+            let timestampSpan = document.getElementById('otpTimestamp');
+            
             if (!countdownSpan) {
                 countdownSpan = document.createElement('span');
                 countdownSpan.id = 'otpCountdown';
@@ -698,8 +701,33 @@ class OTPValidator {
                 this.otpCodeSpan.parentNode.appendChild(document.createTextNode('s)'));
             }
             
+            if (!timestampSpan) {
+                timestampSpan = document.createElement('div');
+                timestampSpan.id = 'otpTimestamp';
+                timestampSpan.style.fontSize = '0.8em';
+                timestampSpan.style.color = '#666';
+                timestampSpan.style.marginTop = '5px';
+                this.otpCodeSpan.parentNode.appendChild(timestampSpan);
+            }
+            
             // 更新倒计时显示
             countdownSpan.textContent = seconds;
+            
+            // 更新时间戳显示
+            const now = new Date();
+            const dateString = now.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            const timeString = now.toLocaleTimeString('zh-CN', { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                hour12: false 
+            });
+            timestampSpan.textContent = `（东8区）${dateString} ${timeString}`;
+            
         } catch (error) {
             console.error('更新倒计时显示时出错:', error);
         }
