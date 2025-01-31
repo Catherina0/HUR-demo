@@ -13,7 +13,7 @@ dist
 cache
 temp
 examples-temp
-node_modules
+node_modules/
 pnpm-global
 TODOs.md
 *.timestamp-*.mjs

@@ -381,6 +381,8 @@ class OTPValidator {
 
             // 记录扫描状态
             this.isScanning = false;
+            this.lastResult = null;
+            this.noCodeTimeout = null;
 
             // 绑定扫描按钮事件
             scanButton.addEventListener('click', async () => {
@@ -421,13 +423,11 @@ class OTPValidator {
             }
 
             try {
-                // 获取可用的相机设备
                 const devices = await Html5Qrcode.getCameras();
                 if (devices && devices.length) {
                     const cameraId = devices[0].id;
                     console.log('使用相机:', cameraId);
 
-                    // 开始扫描
                     await this.html5QrCode.start(
                         cameraId,
                         {
@@ -436,12 +436,28 @@ class OTPValidator {
                         },
                         (decodedText, decodedResult) => {
                             console.log('扫描结果:', decodedText);
+                            // 清除之前的超时
+                            if (this.noCodeTimeout) {
+                                clearTimeout(this.noCodeTimeout);
+                            }
+                            this.lastResult = decodedText;
                             this.handleScanResult(decodedText);
                         },
                         (errorMessage) => {
-                            // 忽略常规扫描错误
-                            if (!errorMessage.includes("QR code parse error")) {
-                                console.warn('扫描出错:', errorMessage);
+                            // 当无法识别二维码时
+                            if (this.lastResult !== null) {
+                                // 设置短暂的延迟，避免闪烁
+                                if (this.noCodeTimeout) {
+                                    clearTimeout(this.noCodeTimeout);
+                                }
+                                this.noCodeTimeout = setTimeout(() => {
+                                    this.lastResult = null;
+                                    const scanResult = document.getElementById('scanResult');
+                                    if (scanResult) {
+                                        scanResult.textContent = '未检测到二维码，请将二维码对准摄像头';
+                                        scanResult.style.color = '#f44336';
+                                    }
+                                }, 500); // 500ms 延迟
                             }
                         }
                     );
