@@ -226,12 +226,16 @@ class OTPValidator {
                 return;
             }
 
-            const epoch = Math.floor(Date.now() / 1000);
-            // OTP时间间隔 10 秒
-            const time = Math.floor(epoch / 10);
+            // 获取当前时间并向下取整到最近的10秒
+            const currentTime = this.getCurrentTime();
+            const epoch = Math.floor(currentTime / 1000);
+            const timeBase = Math.floor(epoch / 10) * 10;
+            const time = Math.floor(timeBase / 10);
             const timeHex = this.dec2hex(time);
             
+            console.log('当前精确时间:', currentTime);
             console.log('当前时间戳:', epoch);
+            console.log('校准后的时间戳:', timeBase);
             console.log('时间计数器:', time);
             console.log('十六进制时间:', timeHex);
             console.log('处理后的密钥:', processedSecret);
@@ -467,7 +471,6 @@ class OTPValidator {
                         cameraId,
                         {
                             fps: 10,
-                            // 移除 qrbox 配置，使用完整视图
                             aspectRatio: 1,
                             disableFlip: false,
                         },
@@ -478,7 +481,14 @@ class OTPValidator {
                             this.handleScanResult(decodedText);
                         },
                         (errorMessage) => {
-                            // 错误处理保持不变
+                            // 当没有检测到二维码时，更新状态
+                            if (this.lastScanTime && (Date.now() - this.lastScanTime > 200)) {
+                                const scanResult = document.getElementById('scanResult');
+                                if (scanResult && !this.lastScanSuccess) {
+                                    scanResult.textContent = '未检测到二维码，请对准摄像头';
+                                    scanResult.style.color = '#f44336';
+                                }
+                            }
                         }
                     );
                     this.isScanning = true;
@@ -554,18 +564,12 @@ class OTPValidator {
             console.log('处理扫描结果:', result);
             const scanResult = document.getElementById('scanResult');
             
-            // 检查是否在 OTP 更新的敏感时间段
-            if (this.isInSensitiveTimeWindow()) {
-                if (scanResult) {
-                    scanResult.textContent = '请等待新的 OTP 生成后再次扫描';
-                    scanResult.style.color = '#f44336';
-                }
-                this.lastScanSuccess = false;
-                return;
-            }
-
             // 获取当前 OTP 码
             const currentOTP = this.otpCodeSpan.textContent;
+            
+            // 获取当前时间周期信息
+            const currentTime = this.getCurrentTime();
+            const secondsInPeriod = Math.floor((currentTime / 1000) % 10);
             
             // 验证扫描结果是否与当前 OTP 匹配
             if (result === currentOTP) {
@@ -574,18 +578,29 @@ class OTPValidator {
                     scanResult.style.color = '#4CAF50';
                 }
                 this.lastScanSuccess = true;
+                this.lastScanTime = Date.now();
                 
-                // 验证成功后切换到慢速刷新模式
+                // 成功后设置更频繁的检查间隔（1秒）
                 if (this.scanStatusTimer) {
                     clearInterval(this.scanStatusTimer);
-                    this.scanStatusTimer = setInterval(this.checkScanStatus.bind(this), 2000);
+                    this.scanStatusTimer = setInterval(this.checkScanStatus.bind(this), 1000);
                 }
             } else {
-                if (scanResult) {
-                    scanResult.textContent = '验证失败！扫描结果与 OTP 码不匹配';
-                    scanResult.style.color = '#f44336';
+                // 如果在更新前1秒或更新后1秒内，且上次扫描是成功的
+                if (this.lastScanSuccess && (secondsInPeriod >= 9 || secondsInPeriod <= 0)) {
+                    // 保持成功状态
+                    if (scanResult) {
+                        scanResult.textContent = '验证成功！扫描结果与 OTP 码匹配';
+                        scanResult.style.color = '#4CAF50';
+                    }
+                } else {
+                    // 不在容差时间内，显示未检测到
+                    if (scanResult) {
+                        scanResult.textContent = '未检测到';
+                        scanResult.style.color = '#f44336';
+                    }
+                    this.lastScanSuccess = false;
                 }
-                this.lastScanSuccess = false;
             }
             
         } catch (error) {
@@ -599,23 +614,26 @@ class OTPValidator {
         const scanResult = document.getElementById('scanResult');
         
         if (this.lastScanTime) {
-            const timeSinceLastScan = now - this.lastScanTime;
-            const timeThreshold = this.lastScanSuccess ? 2000 : 200;
+            const currentTime = this.getCurrentTime();
+            const secondsInPeriod = Math.floor((currentTime / 1000) % 10);
             
-            if (timeSinceLastScan > timeThreshold) {
+            // 如果上次扫描成功，并且在容差时间内
+            if (this.lastScanSuccess && (secondsInPeriod >= 9 || secondsInPeriod <= 1)) {
+                // 保持成功状态
+                return;
+            }
+            
+            // 如果不在容差时间内且上次扫描不成功
+            if (!this.lastScanSuccess) {
                 if (scanResult) {
-                    scanResult.textContent = '未检测到二维码，请将二维码对准摄像头';
+                    scanResult.textContent = '未检测到';
                     scanResult.style.color = '#f44336';
                 }
-                this.lastResult = null;
-                this.lastScanTime = null;
-                this.lastScanSuccess = false;
-                
-                // 重置为快速刷新模式
-                if (this.scanStatusTimer) {
-                    clearInterval(this.scanStatusTimer);
-                    this.scanStatusTimer = setInterval(this.checkScanStatus.bind(this), 200);
-                }
+            }
+        } else {
+            if (scanResult) {
+                scanResult.textContent = '未检测到';
+                scanResult.style.color = '#f44336';
             }
         }
     }
@@ -738,36 +756,45 @@ class OTPValidator {
         try {
             console.log('启动 OTP 更新计时器');
             
-            // 立即生成一次 OTP
-            if (this.secretKeyInput.value) {
-                this.generateOTP();
-            }
+            const updateOTP = () => {
+                const currentTime = this.getCurrentTime();
+                const secondsInMinute = Math.floor((currentTime / 1000) % 60); // 获取分钟内的秒数
+                const currentPeriod = Math.floor(secondsInMinute / 10); // 当前10秒周期（0-5）
+                const secondsInPeriod = secondsInMinute % 10; // 当前周期内的秒数
+                const millisecondsInSecond = currentTime % 1000;
+                
+                // 计算到下一个10秒周期的精确延迟
+                const delay = (10 - secondsInPeriod) * 1000 - millisecondsInSecond;
+                
+                console.log('当前分钟内秒数:', secondsInMinute);
+                console.log('当前10秒周期:', currentPeriod);
+                console.log('当前周期内秒数:', secondsInPeriod);
+                console.log('当前毫秒数:', millisecondsInSecond);
+                console.log('下次更新延迟:', delay);
 
-            // 计算到下一个整10秒的延迟
-            const now = new Date();
-            const delay = 10000 - (now.getSeconds() % 10) * 1000 - now.getMilliseconds();
-            
-            // 设置首次更新的定时器
-            setTimeout(() => {
-                // 在整10秒时更新 OTP
                 if (this.secretKeyInput.value) {
                     this.generateOTP();
                 }
-                
-                // 之后每10秒更新一次
-                this.otpTimer = setInterval(() => {
-                    if (this.secretKeyInput.value) {
-                        this.generateOTP();
-                    }
-                }, 10000);
-            }, delay);
 
-            // 更新倒计时的定时器（每秒更新）
+                // 设置下一次更新
+                setTimeout(updateOTP, delay);
+            };
+
+            // 立即执行一次
+            updateOTP();
+
+            // 更新倒计时的定时器（每0.1秒更新）
             this.countdownTimer = setInterval(() => {
-                const now = new Date();
-                const remaining = 10 - (now.getSeconds() % 10);
-                this.updateCountdown(remaining);
-            }, 1000);
+                const currentTime = this.getCurrentTime();
+                const secondsInMinute = Math.floor((currentTime / 1000) % 60);
+                const secondsInPeriod = secondsInMinute % 10;
+                
+                // 计算剩余时间：10 - 当前周期内的秒数
+                const remainingTime = 10 - secondsInPeriod;
+                
+                // 更新显示
+                this.updateCountdown(remainingTime);
+            }, 100);
 
             console.log('OTP 更新计时器启动成功');
         } catch (error) {
@@ -828,17 +855,121 @@ class OTPValidator {
             if (this.otpTimer) {
                 clearInterval(this.otpTimer);
                 this.otpTimer = null;
-                console.log('OTP 更新计时器已清理');
             }
             if (this.countdownTimer) {
                 clearInterval(this.countdownTimer);
                 this.countdownTimer = null;
-                console.log('倒计时定时器已清理');
             }
-            // ... 其他清理代码 ...
+            if (this.scanStatusTimer) {
+                clearInterval(this.scanStatusTimer);
+                this.scanStatusTimer = null;
+            }
+            console.log('所有定时器已清理');
         } catch (error) {
             console.error('清理资源时出错:', error);
         }
+    }
+
+    async syncTime() {
+        try {
+            console.log('开始同步时间');
+            
+            // 使用多个时间服务器并行请求
+            const timeServers = [
+                {
+                    url: 'https://worldtimeapi.org/api/timezone/Asia/Shanghai',
+                    parser: async (response) => {
+                        const data = await response.json();
+                        return new Date(data.datetime).getTime();
+                    }
+                },
+                {
+                    url: 'https://www.timeapi.io/api/Time/current/zone?timeZone=Asia/Shanghai',
+                    parser: async (response) => {
+                        const data = await response.json();
+                        return new Date(data.dateTime).getTime();
+                    }
+                }
+                // 可以添加更多备用服务器
+            ];
+
+            // 并行发送所有请求
+            const timePromises = timeServers.map(async server => {
+                const startTime = Date.now();
+                try {
+                    const response = await fetch(server.url);
+                    const endTime = Date.now();
+                    const networkDelay = Math.round((endTime - startTime) / 2);
+                    const serverTime = await server.parser(response);
+                    
+                    return {
+                        serverTime,
+                        networkDelay,
+                        offset: serverTime - (Date.now() - networkDelay)
+                    };
+                } catch (error) {
+                    console.warn(`从服务器 ${server.url} 获取时间失败:`, error);
+                    return null;
+                }
+            });
+
+            // 等待所有请求完成
+            const results = (await Promise.all(timePromises)).filter(result => result !== null);
+
+            if (results.length === 0) {
+                throw new Error('所有时间服务器同步失败');
+            }
+
+            // 计算平均偏移
+            const totalOffset = results.reduce((sum, result) => sum + result.offset, 0);
+            this.timeOffset = Math.round(totalOffset / results.length);
+
+            // 存储时间偏移到 localStorage
+            localStorage.setItem('timeOffset', this.timeOffset.toString());
+            localStorage.setItem('lastSyncTime', Date.now().toString());
+
+            console.log('时间同步成功');
+            console.log('综合时间偏移:', this.timeOffset, 'ms');
+            console.log('各服务器返回结果:', results);
+
+            // 启动定期同步
+            this.startPeriodicTimeSync();
+            
+            return true;
+        } catch (error) {
+            console.error('时间同步失败:', error);
+            // 尝试从 localStorage 读取上次的时间偏移
+            const savedOffset = localStorage.getItem('timeOffset');
+            if (savedOffset) {
+                this.timeOffset = parseInt(savedOffset);
+                console.log('使用上次保存的时间偏移:', this.timeOffset);
+            } else {
+                this.timeOffset = 0;
+            }
+            return false;
+        }
+    }
+
+    startPeriodicTimeSync() {
+        // 每5分钟同步一次时间
+        this.timeSyncInterval = setInterval(() => {
+            this.syncTime().catch(error => {
+                console.error('定期时间同步失败:', error);
+            });
+        }, 5 * 60 * 1000);
+    }
+
+    getCurrentTime() {
+        const now = Date.now();
+        const lastSync = parseInt(localStorage.getItem('lastSyncTime') || '0');
+        const syncAge = now - lastSync;
+
+        // 如果上次同步时间超过10分钟，触发重新同步
+        if (syncAge > 10 * 60 * 1000) {
+            this.syncTime().catch(console.error);
+        }
+
+        return now + (this.timeOffset || 0);
     }
 }
 
