@@ -382,7 +382,8 @@ class OTPValidator {
             // 记录扫描状态
             this.isScanning = false;
             this.lastResult = null;
-            this.noCodeTimeout = null;
+            this.lastScanTime = null;
+            this.scanStatusTimer = null;
 
             // 绑定扫描按钮事件
             scanButton.addEventListener('click', async () => {
@@ -428,37 +429,56 @@ class OTPValidator {
                     const cameraId = devices[0].id;
                     console.log('使用相机:', cameraId);
 
+                    // 启动快速状态刷新定时器（0.2秒）
+                    this.scanStatusTimer = setInterval(() => {
+                        const now = Date.now();
+                        const scanResult = document.getElementById('scanResult');
+                        
+                        if (this.lastScanTime) {
+                            const timeSinceLastScan = now - this.lastScanTime;
+                            
+                            if (this.lastScanSuccess) {
+                                if (timeSinceLastScan > 2000) {
+                                    if (scanResult) {
+                                        scanResult.textContent = '未检测到二维码，请对准摄像头';
+                                        scanResult.style.color = '#f44336';
+                                    }
+                                    this.lastResult = null;
+                                    this.lastScanTime = null;
+                                    this.lastScanSuccess = false;
+                                    
+                                    if (this.scanStatusTimer) {
+                                        clearInterval(this.scanStatusTimer);
+                                        this.scanStatusTimer = setInterval(this.checkScanStatus.bind(this), 200);
+                                    }
+                                }
+                            } else {
+                                if (timeSinceLastScan > 200) {
+                                    if (scanResult) {
+                                        scanResult.textContent = '未检测到二维码，请对准摄像头';
+                                        scanResult.style.color = '#f44336';
+                                    }
+                                }
+                            }
+                        }
+                    }, 200);
+
                     await this.html5QrCode.start(
                         cameraId,
                         {
                             fps: 10,
-                            qrbox: { width: 250, height: 250 },
+                            // 移除 qrbox 配置，使用完整视图
+                            aspectRatio: 1,
+                            disableFlip: false,
                         },
                         (decodedText, decodedResult) => {
                             console.log('扫描结果:', decodedText);
-                            // 清除之前的超时
-                            if (this.noCodeTimeout) {
-                                clearTimeout(this.noCodeTimeout);
-                            }
                             this.lastResult = decodedText;
+                            this.lastScanTime = Date.now();
                             this.handleScanResult(decodedText);
                         },
                         (errorMessage) => {
-                            // 当无法识别二维码时
-                            if (this.lastResult !== null) {
-                                // 设置短暂的延迟，避免闪烁
-                                if (this.noCodeTimeout) {
-                                    clearTimeout(this.noCodeTimeout);
-                                }
-                                this.noCodeTimeout = setTimeout(() => {
-                                    this.lastResult = null;
-                                    const scanResult = document.getElementById('scanResult');
-                                    if (scanResult) {
-                                        scanResult.textContent = '未检测到二维码，请将二维码对准摄像头';
-                                        scanResult.style.color = '#f44336';
-                                    }
-                                }, 500); // 500ms 延迟
-                            }
+                            // 错误处理保持不变
                         }
                     );
                     this.isScanning = true;
@@ -483,6 +503,12 @@ class OTPValidator {
                 await this.html5QrCode.stop();
                 console.log('扫描器已停止');
                 
+                // 清除状态刷新定时器
+                if (this.scanStatusTimer) {
+                    clearInterval(this.scanStatusTimer);
+                    this.scanStatusTimer = null;
+                }
+                
                 // 隐藏扫描器
                 const reader = document.getElementById('reader');
                 if (reader) {
@@ -503,7 +529,24 @@ class OTPValidator {
             scanButton.textContent = '开启扫描';
             scanButton.classList.remove('scanning');
         }
+        
+        // 清除扫描结果
+        const scanResult = document.getElementById('scanResult');
+        if (scanResult) {
+            scanResult.textContent = '';
+        }
+        
+        // 重置内部状态
         this.isScanning = false;
+        this.lastResult = null;
+        this.lastScanTime = null;
+        this.lastScanSuccess = false;
+        
+        // 清除定时器
+        if (this.scanStatusTimer) {
+            clearInterval(this.scanStatusTimer);
+            this.scanStatusTimer = null;
+        }
     }
 
     handleScanResult(result) {
@@ -517,6 +560,7 @@ class OTPValidator {
                     scanResult.textContent = '请等待新的 OTP 生成后再次扫描';
                     scanResult.style.color = '#f44336';
                 }
+                this.lastScanSuccess = false;
                 return;
             }
 
@@ -529,21 +573,49 @@ class OTPValidator {
                     scanResult.textContent = '验证成功！扫描结果与 OTP 码匹配';
                     scanResult.style.color = '#4CAF50';
                 }
+                this.lastScanSuccess = true;
+                
+                // 验证成功后切换到慢速刷新模式
+                if (this.scanStatusTimer) {
+                    clearInterval(this.scanStatusTimer);
+                    this.scanStatusTimer = setInterval(this.checkScanStatus.bind(this), 2000);
+                }
             } else {
                 if (scanResult) {
                     scanResult.textContent = '验证失败！扫描结果与 OTP 码不匹配';
                     scanResult.style.color = '#f44336';
                 }
+                this.lastScanSuccess = false;
             }
-            
-            // 不再自动停止扫描
-            // this.stopScanning();
             
         } catch (error) {
             console.error('处理扫描结果时出错:', error);
-            if (scanResult) {
-                scanResult.textContent = '扫描处理失败，请重试';
-                scanResult.style.color = '#f44336';
+            this.lastScanSuccess = false;
+        }
+    }
+
+    checkScanStatus() {
+        const now = Date.now();
+        const scanResult = document.getElementById('scanResult');
+        
+        if (this.lastScanTime) {
+            const timeSinceLastScan = now - this.lastScanTime;
+            const timeThreshold = this.lastScanSuccess ? 2000 : 200;
+            
+            if (timeSinceLastScan > timeThreshold) {
+                if (scanResult) {
+                    scanResult.textContent = '未检测到二维码，请将二维码对准摄像头';
+                    scanResult.style.color = '#f44336';
+                }
+                this.lastResult = null;
+                this.lastScanTime = null;
+                this.lastScanSuccess = false;
+                
+                // 重置为快速刷新模式
+                if (this.scanStatusTimer) {
+                    clearInterval(this.scanStatusTimer);
+                    this.scanStatusTimer = setInterval(this.checkScanStatus.bind(this), 200);
+                }
             }
         }
     }
@@ -553,7 +625,7 @@ class OTPValidator {
         const now = new Date();
         const secondsInPeriod = now.getSeconds() % 10;  // 在 10 秒周期内的秒数
         
-        // 如果在周期的最后 2 秒或开始 2 秒内
+        // 如果在周期的最后 1 秒或开始 1 秒内
         return secondsInPeriod >= 9 || secondsInPeriod < 1;
     }
 
