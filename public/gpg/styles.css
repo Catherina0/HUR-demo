@@ -124,4 +124,51 @@ button:hover {
 
 .copy-btn.success {
     background-color: #28a745;
+}
+
+.char-counter {
+    color: #666;
+    font-size: 14px;
+    margin: 5px 0;
+}
+
+.qr-container {
+    text-align: center;
+    margin: 20px 0;
+}
+
+#encryptQRCode {
+    margin: 20px auto;
+}
+
+#encryptQRCode canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+.qr-btn {
+    background-color: #17a2b8;
+}
+
+.qr-btn:hover {
+    background-color: #138496;
+}
+
+.scan-btn {
+    background-color: #6610f2;
+    margin-top: 10px;
+}
+
+.scan-btn:hover {
+    background-color: #520dc2;
+}
+
+#qrReader {
+    width: 100%;
+    max-width: 600px;
+    margin: 20px auto;
+}
+
+.decrypt-input-container {
+    position: relative;
 } 

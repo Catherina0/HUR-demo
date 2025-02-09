@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GPG 加密解密工具</title>
+    <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/openpgp@5.5.0/dist/openpgp.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/openpgp@5.11.0/dist/openpgp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script defer src="script.js"></script>
 </head>
 <body>
     <div class="container">
@@ -21,7 +25,7 @@
             <h2>生成密钥对</h2>
             <input type="text" id="name" placeholder="姓名">
             <input type="email" id="email" placeholder="电子邮件">
-            <input type="password" id="genPassphrase" placeholder="设置私钥密码">
+            <input type="password" id="genPassphrase" placeholder="设置私钥密码（可选）">
             <button onclick="generateKeyPair()">生成密钥对</button>
             <div class="key-result">
                 <h3>公钥：</h3>
@@ -38,18 +42,30 @@
             <h2>加密</h2>
             <textarea id="publicKey" placeholder="请输入收件人的公钥..."></textarea>
             <textarea id="encryptText" placeholder="请输入要加密的文本..."></textarea>
+            <div class="char-counter">剩余可加密字符数：<span id="charCount">2953</span></div>
             <button onclick="encryptMessage()">加密</button>
             <div class="result-container">
                 <textarea id="encryptResult" placeholder="加密结果..." readonly></textarea>
                 <button onclick="copyText('encryptResult')" class="copy-btn">复制结果</button>
+            </div>
+            <div class="qr-container">
+                <button onclick="generateQR('encryptResult')" class="qr-btn">生成二维码</button>
+                <div id="encryptQRCode"></div>
+                <a id="qrDownload" download="encrypted-qr.png" style="display: none;">
+                    <button class="save-btn">保存二维码</button>
+                </a>
             </div>
         </div>
         
         <div class="tab-content" id="decrypt" style="display: none;">
             <h2>解密</h2>
             <textarea id="privateKey" placeholder="请输入您的私钥..."></textarea>
-            <input type="password" id="passphrase" placeholder="请输入私钥密码">
-            <textarea id="decryptText" placeholder="请输入要解密的文本..."></textarea>
+            <input type="password" id="passphrase" placeholder="输入私钥密码（如果有）">
+            <div class="decrypt-input-container">
+                <textarea id="decryptText" placeholder="请输入要解密的文本..."></textarea>
+                <button onclick="startQRScanner()" class="scan-btn">扫描二维码</button>
+            </div>
+            <div id="qrReader"></div>
             <button onclick="decryptMessage()">解密</button>
             <div class="result-container">
                 <textarea id="decryptResult" placeholder="解密结果..." readonly></textarea>
@@ -57,6 +73,5 @@
             </div>
         </div>
     </div>
-    <script src="script.js"></script>
 </body>
 </html>
