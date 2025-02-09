@@ -25,39 +25,70 @@ document.querySelectorAll('.tab-btn').forEach(button => {
 // 二维码配置
 const QR_VERSION = 40;
 const QR_ERROR_LEVEL = 'M';
-const MAX_QR_BYTES = 2953; // 版本40，纠错级别M的最大字节数
+const MAX_QR_BYTES = 2953;
+// 加密后文本膨胀系数（约为原文本的 2 倍）
+const ENCRYPTION_EXPANSION_FACTOR = 2.0;
+// 考虑膨胀后的安全系数（37%）
+const SAFE_CAPACITY_FACTOR = 0.37;
 
 // 计算字符串的字节长度
 function getByteLength(str) {
-    console.log('计算字节长度，输入字符串长度:', str?.length);
-    const byteLength = new TextEncoder().encode(str).length;
-    console.log('计算得到的字节长度:', byteLength);
-    return byteLength;
+    return new TextEncoder().encode(str).length;
 }
 
-// 在页面加载完成后检查库的状态
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('页面加载完成');
-    console.log('QRCode 库状态:', typeof QRCode);
-    console.log('OpenPGP 库状态:', typeof openpgp);
-    try {
-        await initOpenPGP();
-        console.log('OpenPGP 初始化成功');
+// 更新字符计数显示
+function updateCharCount(inputText) {
+    console.log('开始更新字符计数');
+    const maxSafeBytes = Math.floor(MAX_QR_BYTES * SAFE_CAPACITY_FACTOR);
+    console.log('最大安全字节数:', maxSafeBytes);  // 应该是约 1329
+    
+    const currentBytes = getByteLength(inputText);
+    console.log('当前输入字节数:', currentBytes);
+    
+    const remainingBytes = maxSafeBytes - currentBytes;
+    console.log('剩余可用字节数:', remainingBytes);
+    
+    const charCounter = document.getElementById('charCount');
+    console.log('找到计数器元素:', charCounter);
+    
+    if (charCounter) {
+        charCounter.textContent = `${remainingBytes} 字节 ` +
+            `(约 ${Math.floor(remainingBytes/3)} 个中文或 ${remainingBytes} 个英文)`;
+        console.log('更新后的计数器文本:', charCounter.textContent);
         
-        // 添加文本输入监听
-        const encryptText = document.getElementById('encryptText');
-        if (encryptText) {
-            encryptText.addEventListener('input', function() {
-                const currentBytes = getByteLength(this.value);
-                const remainingBytes = MAX_QR_BYTES - currentBytes;
-                const charCounter = document.getElementById('charCount');
-                
-                charCounter.textContent = `${remainingBytes} 字节 (约 ${Math.floor(remainingBytes/3)} 个中文或 ${remainingBytes} 个英文)`;
-                charCounter.style.color = remainingBytes < 0 ? 'red' : '';
-            });
-        }
-    } catch (error) {
-        console.error('初始化失败:', error);
+        // 更新颜色
+        charCounter.style.color = currentBytes > maxSafeBytes ? 'red' : '';
+        console.log('计数器颜色已更新:', charCounter.style.color);
+    } else {
+        console.error('未找到计数器元素!');
+    }
+}
+
+// 在页面加载完成后初始化计数器
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('页面加载完成，初始化计数器');
+    const charCounter = document.getElementById('charCount');
+    console.log('初始计数器元素:', charCounter);
+    
+    if (charCounter) {
+        const initialBytes = Math.floor(MAX_QR_BYTES * SAFE_CAPACITY_FACTOR);
+        charCounter.textContent = `${initialBytes} 字节 ` +
+            `(约 ${Math.floor(initialBytes/3)} 个中文或 ${initialBytes} 个英文)`;
+        console.log('计数器初始化完成:', charCounter.textContent);
+    } else {
+        console.error('初始化时未找到计数器元素!');
+    }
+    
+    // 添加输入监听
+    const encryptText = document.getElementById('encryptText');
+    if (encryptText) {
+        console.log('找到输入框元素');
+        encryptText.addEventListener('input', function() {
+            console.log('输入框内容变化，触发更新');
+            updateCharCount(this.value);
+        });
+    } else {
+        console.error('未找到输入框元素!');
     }
 });
 
@@ -290,20 +321,43 @@ async function copyText(elementId) {
 // 生成二维码的函数
 function generateQRCode(text, container) {
     console.log('开始生成二维码');
-    // 使用 qrcode-generator 库
-    const qr = qrcode(QR_VERSION, QR_ERROR_LEVEL);
-    qr.addData(text);
-    qr.make();
-    
-    // 生成 SVG
-    const svgElement = qr.createSvgTag({
-        cellSize: 4,
-        margin: 4
-    });
-    
-    container.innerHTML = svgElement;
-    console.log('二维码生成完成');
-    return container.querySelector('svg');
+    try {
+        // 检查 kjua 是否可用
+        if (typeof kjua === 'undefined') {
+            throw new Error('QRCode 库未正确加载');
+        }
+        
+        console.log('生成二维码的文本长度:', text.length);
+        
+        // 清除容器内容
+        container.innerHTML = '';
+        
+        // 使用 kjua 生成二维码
+        const qrcode = kjua({
+            text: text,
+            size: 400,
+            render: 'canvas',
+            crisp: true,
+            minVersion: 1,
+            ecLevel: 'M',
+            back: '#ffffff',
+            fill: '#000000',
+            quiet: 2,
+            mode: 'plain'
+        });
+
+        // 添加到容器
+        if (qrcode) {
+            container.appendChild(qrcode);
+            console.log('二维码已生成并添加到容器');
+            return qrcode;
+        } else {
+            throw new Error('二维码生成失败');
+        }
+    } catch (error) {
+        console.error('QRCode 生成错误:', error);
+        throw error;
+    }
 }
 
 // 生成二维码
@@ -322,25 +376,28 @@ async function generateQR(sourceId) {
         console.log('文本字节长度:', byteLength);
         
         if (byteLength > MAX_QR_BYTES) {
-            alert(`内容超过最大字节限制（${MAX_QR_BYTES}字节）！\n当前内容：${byteLength}字节`);
+            alert(`文本长度超过限制！\n` +
+                  `当前长度：${byteLength} 字节\n` +
+                  `最大限制：${MAX_QR_BYTES} 字节\n` +
+                  `请减少文本内容后重试。`);
             return;
         }
 
         const qrContainer = document.getElementById('encryptQRCode');
         console.log('二维码容器:', qrContainer);
-        qrContainer.innerHTML = '';
 
         // 生成二维码
-        const svg = generateQRCode(text, qrContainer);
+        const qrElement = generateQRCode(text, qrContainer);
+        console.log('生成的二维码元素:', qrElement);
         
         // 创建下载链接
-        const downloadLink = document.getElementById('qrDownload');
-        // 将 SVG 转换为 Data URL
-        const svgData = new XMLSerializer().serializeToString(svg);
-        const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
-        downloadLink.href = URL.createObjectURL(svgBlob);
-        downloadLink.download = 'qrcode.svg';
-        downloadLink.style.display = 'block';
+        if (qrElement) {
+            const downloadLink = document.getElementById('qrDownload');
+            downloadLink.href = qrElement.toDataURL('image/png');
+            downloadLink.download = 'encrypted-qr.png';
+            downloadLink.style.display = 'block';
+            console.log('下载链接已创建');
+        }
 
     } catch (error) {
         console.error('二维码生成详细错误:', error);
@@ -406,4 +463,12 @@ document.querySelectorAll('.tab-btn').forEach(button => {
             html5QrcodeScanner.clear();
         }
     });
+});
+
+// 在页面加载完成后检查库是否正确加载
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('检查库加载状态:');
+    console.log('QRCode:', typeof QRCode);
+    console.log('openpgp:', typeof openpgp);
+    console.log('Html5QrcodeScanner:', typeof Html5QrcodeScanner);
 });

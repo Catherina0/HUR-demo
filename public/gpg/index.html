@@ -6,9 +6,9 @@
     <title>GPG 加密解密工具</title>
     <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
     <link rel="stylesheet" href="styles.css">
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdn.jsdelivr.net/npm/openpgp@5.11.0/dist/openpgp.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="js/lib/openpgp.min.js"></script>
+    <script src="js/lib/kjua.min.js"></script>
+    <script src="js/lib/html5-qrcode.min.js"></script>
     <script defer src="script.js"></script>
 </head>
 <body>
@@ -42,7 +42,7 @@
             <h2>加密</h2>
             <textarea id="publicKey" placeholder="请输入收件人的公钥..."></textarea>
             <textarea id="encryptText" placeholder="请输入要加密的文本..."></textarea>
-            <div class="char-counter">剩余可加密字符数：<span id="charCount">2953</span></div>
+            <div class="char-counter">（如需生成二维码）剩余可加密字符数：<span id="charCount">1329</span></div>
             <button onclick="encryptMessage()">加密</button>
             <div class="result-container">
                 <textarea id="encryptResult" placeholder="加密结果..." readonly></textarea>
