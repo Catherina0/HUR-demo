@@ -1,0 +1,127 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+.tabs {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.tab-btn.active {
+    background-color: #007bff;
+    color: white;
+}
+
+textarea {
+    width: 100%;
+    height: 150px;
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+}
+
+input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+input[type="text"],
+input[type="email"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 10px 0;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.key-result {
+    margin-top: 20px;
+}
+
+.key-result h3 {
+    margin: 10px 0;
+    color: #333;
+}
+
+.save-btn {
+    background-color: #28a745;
+    margin: 5px 0 15px 0;
+}
+
+.save-btn:hover {
+    background-color: #218838;
+}
+
+.result-container {
+    position: relative;
+    margin: 10px 0;
+}
+
+.result-container textarea {
+    margin: 0;
+}
+
+.copy-btn {
+    background-color: #6c757d;
+    width: auto;
+    padding: 5px 15px;
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    font-size: 14px;
+}
+
+.copy-btn:hover {
+    background-color: #5a6268;
+}
+
+.copy-btn.success {
+    background-color: #28a745;
+} 
