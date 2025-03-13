@@ -783,6 +783,13 @@ class OTPValidator {
             // 立即执行一次
             updateOTP();
 
+            // 同步时间（如果尚未同步）
+            if (!this.timeOffset) {
+                this.syncTime().catch(error => {
+                    console.error('时间同步失败:', error);
+                });
+            }
+
             // 更新倒计时的定时器（每0.1秒更新）
             this.countdownTimer = setInterval(() => {
                 const currentTime = this.getCurrentTime();
@@ -793,7 +800,7 @@ class OTPValidator {
                 const remainingTime = 10 - secondsInPeriod;
                 
                 // 更新显示
-                this.updateCountdown(remainingTime);
+                this.updateCountdown(remainingTime, currentTime);
             }, 100);
 
             console.log('OTP 更新计时器启动成功');
@@ -802,7 +809,7 @@ class OTPValidator {
         }
     }
 
-    updateCountdown(seconds) {
+    updateCountdown(seconds, syncedTime) {
         try {
             // 获取或创建倒计时显示元素
             let countdownSpan = document.getElementById('otpCountdown');
@@ -828,20 +835,22 @@ class OTPValidator {
             // 更新倒计时显示
             countdownSpan.textContent = seconds;
             
-            // 更新时间戳显示
-            const now = new Date();
-            const dateString = now.toLocaleDateString('zh-CN', {
+            // 使用同步后的时间创建日期对象
+            const syncedDate = new Date(syncedTime);
+            
+            // 使用同步后的时间更新时间戳显示
+            const dateString = syncedDate.toLocaleDateString('zh-CN', {
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit'
             });
-            const timeString = now.toLocaleTimeString('zh-CN', { 
+            const timeString = syncedDate.toLocaleTimeString('zh-CN', { 
                 hour: '2-digit', 
                 minute: '2-digit', 
                 second: '2-digit',
                 hour12: false 
             });
-            timestampSpan.textContent = `（东8区）${dateString} ${timeString}`;
+            timestampSpan.textContent = `（北京时间）${dateString} ${timeString}`;
             
         } catch (error) {
             console.error('更新倒计时显示时出错:', error);
@@ -874,7 +883,7 @@ class OTPValidator {
         try {
             console.log('开始同步时间');
             
-            // 使用多个时间服务器并行请求
+            // 使用多个时间服务器并行请求，确保获取准确的北京时间
             const timeServers = [
                 {
                     url: 'https://worldtimeapi.org/api/timezone/Asia/Shanghai',
@@ -884,10 +893,10 @@ class OTPValidator {
                     }
                 },
                 {
-                    url: 'https://www.timeapi.io/api/Time/current/zone?timeZone=Asia/Shanghai',
+                    url: 'https://quan.suning.com/getSysTime.do',
                     parser: async (response) => {
                         const data = await response.json();
-                        return new Date(data.dateTime).getTime();
+                        return new Date(data.sysTime2).getTime();
                     }
                 }
                 // 可以添加更多备用服务器
@@ -964,8 +973,8 @@ class OTPValidator {
         const lastSync = parseInt(localStorage.getItem('lastSyncTime') || '0');
         const syncAge = now - lastSync;
 
-        // 如果上次同步时间超过10分钟，触发重新同步
-        if (syncAge > 10 * 60 * 1000) {
+        // 如果上次同步时间超过10分钟或者尚未同步，触发重新同步
+        if (syncAge > 10 * 60 * 1000 || !this.timeOffset) {
             this.syncTime().catch(console.error);
         }
 
