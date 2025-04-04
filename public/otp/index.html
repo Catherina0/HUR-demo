@@ -18,6 +18,15 @@
     <div class="container">
         <h1>实时OTP验证器</h1>
         
+        <!-- 用户输入部分 -->
+        <div class="user-input-section">
+            <div class="input-group">
+                <input type="text" id="userString1" placeholder="己方用户名">
+                <input type="text" id="userString2" placeholder="对方用户名">
+                <input type="text" id="userKey" placeholder="密钥">
+            </div>
+        </div>
+        
         <!-- 原始密钥生成部分 -->
         <div class="secret-section">
             <button id="generateRawSecret">生成原始密钥</button>

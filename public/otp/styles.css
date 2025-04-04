@@ -10,6 +10,32 @@ h1 {
     margin-bottom: 30px;
 }
 
+/* 用户输入部分样式 */
+.user-input-section {
+    margin: 20px 0;
+}
+
+.input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.input-group input {
+    flex: 1;
+    min-width: 200px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: sans-serif;
+}
+
+/* 当按钮准备好时的样式 */
+.ready {
+    background-color: #2196F3 !important;
+}
+
 .secret-section {
     margin: 20px 0;
 }

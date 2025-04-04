@@ -28,7 +28,10 @@ class OTPValidator {
                 generateRawSecretBtn: 'generateRawSecret',
                 rawSecretDisplay: 'rawSecretDisplay',
                 rawSecretSpan: 'rawSecret',
-                copyRawSecretBtn: 'copyRawSecret'
+                copyRawSecretBtn: 'copyRawSecret',
+                userString1Input: 'userString1',
+                userString2Input: 'userString2',
+                userKeyInput: 'userKey'
             };
 
             // 检查每个元素
@@ -75,6 +78,30 @@ class OTPValidator {
                     throw new Error(`缺少必需的按钮元素: ${name}`);
                 }
             });
+            
+            // 绑定用户输入框变化事件
+            if (this.userString1Input && this.userString2Input && this.userKeyInput) {
+                const handleUserInputChange = () => {
+                    // 检查是否有任何输入
+                    const hasString1 = this.userString1Input.value.trim() !== '';
+                    const hasString2 = this.userString2Input.value.trim() !== '';
+                    const hasUserKey = this.userKeyInput.value.trim() !== '';
+                    
+                    // 如果至少有一个输入，更新按钮样式
+                    if (hasString1 || hasString2 || hasUserKey) {
+                        this.generateRawSecretBtn.textContent = '使用输入生成密钥';
+                        this.generateRawSecretBtn.classList.add('ready');
+                    } else {
+                        this.generateRawSecretBtn.textContent = '生成原始密钥';
+                        this.generateRawSecretBtn.classList.remove('ready');
+                    }
+                };
+                
+                this.userString1Input.addEventListener('input', handleUserInputChange);
+                this.userString2Input.addEventListener('input', handleUserInputChange);
+                this.userKeyInput.addEventListener('input', handleUserInputChange);
+                console.log('成功绑定用户输入变化事件');
+            }
 
             // 绑定原始密钥生成按钮
             this.generateRawSecretBtn.addEventListener('click', () => {
@@ -734,13 +761,140 @@ class OTPValidator {
         try {
             console.log('开始生成原始密钥');
             
-            // 生成 20 字节（160 位）的随机数据
-            const randomBytes = new Uint8Array(20);
-            window.crypto.getRandomValues(randomBytes);
-            console.log('生成的随机字节:', Array.from(randomBytes));
-
-            // 将随机字节转换为十六进制字符串
-            const rawSecret = Array.from(randomBytes)
+            // 获取用户输入的字符串
+            const userString1 = this.userString1Input.value || '';
+            const userString2 = this.userString2Input.value || '';
+            const userKey = this.userKeyInput.value || '';
+            console.log('己方用户名:', userString1);
+            console.log('对方用户名:', userString2);
+            console.log('自定义密钥:', userKey);
+            
+            // 将用户输入的字符串转换为字节数组
+            const encoder = new TextEncoder();
+            
+            // 使用Uint8Array合并所有输入
+            let combinedInput = new Uint8Array(0);
+            
+            // 如果有自定义密钥，优先添加它
+            if (userKey) {
+                // 使用SHA-1哈希自定义密钥，确保它提供一个良好的熵源
+                try {
+                    const shaObj = new jsSHA("SHA-1", "TEXT");
+                    shaObj.update(userKey);
+                    const keyHash = shaObj.getHash("HEX");
+                    console.log('自定义密钥哈希:', keyHash);
+                    
+                    // 将哈希转换为字节数组
+                    const keyHashBytes = new Uint8Array(keyHash.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                    console.log('自定义密钥哈希字节:', Array.from(keyHashBytes));
+                    
+                    // 合并到输入中
+                    combinedInput = this.concatUint8Arrays(combinedInput, keyHashBytes);
+                } catch (error) {
+                    console.error('处理自定义密钥时出错:', error);
+                    // 退回到原始输入
+                    const userKeyBytes = encoder.encode(userKey);
+                    combinedInput = this.concatUint8Arrays(combinedInput, userKeyBytes);
+                }
+            }
+            
+            // 处理用户名 - 改为顺序无关的方式
+            if (userString1 || userString2) {
+                try {
+                    // 方法1：对两个用户名进行排序，确保相同的两个用户名总是以相同的顺序处理
+                    let names = [userString1, userString2].filter(name => name); // 过滤空字符串
+                    if (names.length > 0) {
+                        // 按字母顺序排序用户名
+                        names.sort();
+                        console.log('排序后的用户名:', names);
+                        
+                        // 对每个用户名分别计算哈希，然后合并哈希结果
+                        for (const name of names) {
+                            const shaObj = new jsSHA("SHA-1", "TEXT");
+                            shaObj.update(name);
+                            const nameHash = shaObj.getHash("HEX");
+                            console.log(`用户名 "${name}" 的哈希:`, nameHash);
+                            
+                            // 将哈希转换为字节数组
+                            const nameHashBytes = new Uint8Array(nameHash.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                            
+                            // 使用异或(XOR)操作合并哈希，确保顺序无关
+                            if (combinedInput.length === 0) {
+                                combinedInput = nameHashBytes;
+                            } else {
+                                // 使用异或操作合并哈希
+                                for (let i = 0; i < Math.min(combinedInput.length, nameHashBytes.length); i++) {
+                                    combinedInput[i] ^= nameHashBytes[i]; 
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('处理用户名时出错:', error);
+                    // 回退到简单合并方式
+                    const userBytes1 = encoder.encode(userString1);
+                    const userBytes2 = encoder.encode(userString2);
+                    
+                    if (userString1) {
+                        combinedInput = this.concatUint8Arrays(combinedInput, userBytes1);
+                    }
+                    if (userString2) {
+                        combinedInput = this.concatUint8Arrays(combinedInput, userBytes2);
+                    }
+                }
+            }
+            
+            console.log('合并的输入字节:', Array.from(combinedInput));
+            
+            // 如果没有任何输入，生成纯随机密钥
+            let finalBytes;
+            if (combinedInput.length === 0) {
+                // 生成 20 字节（160 位）的随机数据
+                finalBytes = new Uint8Array(20);
+                window.crypto.getRandomValues(finalBytes);
+                console.log('生成的完全随机字节:', Array.from(finalBytes));
+            } else {
+                // 使用SHA-1哈希合并的输入生成最终密钥
+                try {
+                    // 使用jsSHA库
+                    const inputHex = Array.from(combinedInput)
+                        .map(byte => byte.toString(16).padStart(2, '0'))
+                        .join('');
+                    
+                    const shaObj = new jsSHA("SHA-1", "HEX");
+                    shaObj.update(inputHex);
+                    const hash = shaObj.getHash("HEX");
+                    console.log('最终密钥哈希:', hash);
+                    
+                    // 将哈希转换为字节数组
+                    finalBytes = new Uint8Array(hash.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                } catch (error) {
+                    console.error('生成最终密钥哈希时出错:', error);
+                    
+                    // 失败时使用备用方法
+                    finalBytes = new Uint8Array(20);
+                    
+                    // 复制合并的输入，但不超过20字节
+                    const bytesToCopy = Math.min(combinedInput.length, 20);
+                    for (let i = 0; i < bytesToCopy; i++) {
+                        finalBytes[i] = combinedInput[i];
+                    }
+                    
+                    // 如果输入不足20字节，填充随机字节
+                    if (bytesToCopy < 20) {
+                        const randomFill = new Uint8Array(20 - bytesToCopy);
+                        window.crypto.getRandomValues(randomFill);
+                        for (let i = 0; i < randomFill.length; i++) {
+                            finalBytes[bytesToCopy + i] = randomFill[i];
+                        }
+                    }
+                }
+            }
+            
+            console.log('最终字节(20):', Array.from(finalBytes));
+            
+            // 将字节数组转换为十六进制字符串
+            const rawSecret = Array.from(finalBytes)
                 .map(byte => byte.toString(16).padStart(2, '0'))
                 .join('');
             
@@ -761,6 +915,14 @@ class OTPValidator {
             console.error('生成原始密钥时出错:', error);
             return null;
         }
+    }
+    
+    // 辅助方法：合并两个Uint8Array
+    concatUint8Arrays(array1, array2) {
+        const result = new Uint8Array(array1.length + array2.length);
+        result.set(array1, 0);
+        result.set(array2, array1.length);
+        return result;
     }
 
     startOTPUpdateTimer() {
