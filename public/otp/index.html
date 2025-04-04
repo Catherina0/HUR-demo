@@ -23,22 +23,30 @@
             <div class="input-group">
                 <input type="text" id="userString1" placeholder="己方用户名">
                 <input type="text" id="userString2" placeholder="对方用户名">
-                <input type="text" id="userKey" placeholder="密钥">
+                <input type="password" id="userKey" placeholder="密钥">
             </div>
         </div>
         
-        <!-- 原始密钥生成部分 -->
+        <!-- 密钥生成部分 -->
         <div class="secret-section">
-            <button id="generateRawSecret">生成原始密钥</button>
+            <button id="generateRawSecret">生成密钥</button>
             <div class="secret-display" id="rawSecretDisplay" style="display: none;">
-                原始密钥: <span id="rawSecret" class="raw-secret"></span>
-                <button class="copy-btn" id="copyRawSecret">复制</button>
+                <div class="secret-message">
+                    <span id="rawSecret" class="secret-text"></span>
+                    <button type="button" class="toggle-password" id="toggleRawSecret" style="display: none;">👁️</button>
+                </div>
+                <!-- 注释掉复制密钥按钮 
+                <button class="copy-btn" id="copyRawSecret">复制密钥</button>
+                -->
             </div>
         </div>
 
         <!-- OTP 输入和生成部分 -->
         <div class="input-section">
-            <input type="text" id="secretKey" placeholder="输入 Base32 格式的密钥">
+            <div class="password-container" style="display: none;">
+                <input type="password" id="secretKey" placeholder="输入 Base32 格式的密钥">
+                <button type="button" class="toggle-password" id="toggleSecretKey">👁️</button>
+            </div>
             <button id="generateOTP">生成 OTP</button>
             <button id="generateQR">生成二维码</button>
         </div>

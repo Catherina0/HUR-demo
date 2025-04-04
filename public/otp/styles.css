@@ -4,6 +4,51 @@
     padding: 20px;
 }
 
+/* 密码显示相关样式 */
+.password-container {
+    position: relative;
+    display: inline-block;
+    flex: 1;
+}
+
+.password-container input[type="password"],
+.password-container input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 5px;
+    color: #666;
+}
+
+.toggle-password:hover {
+    color: #333;
+    background-color: transparent;
+}
+
+.password-hidden {
+    -webkit-text-security: disc;
+    letter-spacing: 1px;
+}
+
+/* 修改输入区域样式以适应密码查看按钮 */
+.input-section .password-container {
+    min-width: 200px;
+    flex: 1;
+}
+
 h1 {
     text-align: center;
     color: #333;
@@ -36,6 +81,13 @@ h1 {
     background-color: #2196F3 !important;
 }
 
+/* 当有密钥输入时的特殊样式 */
+.key-ready {
+    background-color: #673AB7 !important; /* 紫色，表示密钥输入 */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    font-weight: bold;
+}
+
 .secret-section {
     margin: 20px 0;
 }
@@ -46,6 +98,19 @@ h1 {
     background-color: #f5f5f5;
     border: 1px solid #ddd;
     border-radius: 4px;
+}
+
+.secret-message {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.secret-text {
+    font-family: sans-serif;
+    font-size: 1em;
+    word-break: break-all;
+    color: #333;
 }
 
 .raw-secret {
