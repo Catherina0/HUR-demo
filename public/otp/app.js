@@ -137,8 +137,8 @@ class OTPValidator {
                         this.generateRawSecretBtn.textContent = '生成密钥';
                         this.generateRawSecretBtn.classList.remove('ready');
                         this.generateRawSecretBtn.classList.remove('key-ready');
-                        // 允许生成完全随机密钥
-                        this.generateRawSecretBtn.disabled = false;
+                        // 修改：当没有任何输入时禁用按钮
+                        this.generateRawSecretBtn.disabled = true;
                     }
                 };
                 
