@@ -171,4 +171,25 @@ button:hover {
 
 .decrypt-input-container {
     position: relative;
+}
+
+/* 语言选择器样式 */
+.lang-selector {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+}
+
+.lang-selector label {
+    margin-right: 10px;
+    color: #333;
+}
+
+.lang-selector select {
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
 } 

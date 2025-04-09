@@ -8,6 +8,19 @@ async function initOpenPGP() {
     console.log('OpenPGP 库已加载');
 }
 
+// 语言切换函数
+function changeLanguage(lang) {
+    if (i18n.setLanguage(lang)) {
+        // 设置下拉框值
+        document.getElementById('language-select').value = lang;
+        // 更新字符计数
+        const encryptText = document.getElementById('encryptText');
+        if (encryptText) {
+            updateCharCount(encryptText.value);
+        }
+    }
+}
+
 // 切换标签页
 document.querySelectorAll('.tab-btn').forEach(button => {
     button.addEventListener('click', () => {
@@ -52,8 +65,8 @@ function updateCharCount(inputText) {
     console.log('找到计数器元素:', charCounter);
     
     if (charCounter) {
-        charCounter.textContent = `${remainingBytes} 字节 ` +
-            `(约 ${Math.floor(remainingBytes/3)} 个中文或 ${remainingBytes} 个英文)`;
+        charCounter.textContent = `${remainingBytes} ${i18n.t('bytes')} ` +
+            `(${i18n.t('about')} ${Math.floor(remainingBytes/3)} ${i18n.t('chinese')} ${i18n.t('or')} ${remainingBytes} ${i18n.t('english')})`;
         console.log('更新后的计数器文本:', charCounter.textContent);
         
         // 更新颜色
@@ -64,16 +77,26 @@ function updateCharCount(inputText) {
     }
 }
 
-// 在页面加载完成后初始化计数器
+// 在页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('页面加载完成，初始化计数器');
+    console.log('页面加载完成，初始化应用');
+    
+    // 初始化语言
+    const currentLang = i18n.getCurrentLanguage();
+    document.getElementById('language-select').value = currentLang;
+    document.getElementById('lang-label').textContent = i18n.t('langSwitchLabel');
+    i18n.translatePage();
+    
+    console.log('页面初始化完成，当前语言:', currentLang);
+    
+    // 初始化计数器
     const charCounter = document.getElementById('charCount');
     console.log('初始计数器元素:', charCounter);
     
     if (charCounter) {
         const initialBytes = Math.floor(MAX_QR_BYTES * SAFE_CAPACITY_FACTOR);
-        charCounter.textContent = `${initialBytes} 字节 ` +
-            `(约 ${Math.floor(initialBytes/3)} 个中文或 ${initialBytes} 个英文)`;
+        charCounter.textContent = `${initialBytes} ${i18n.t('bytes')} ` +
+            `(${i18n.t('about')} ${Math.floor(initialBytes/3)} ${i18n.t('chinese')} ${i18n.t('or')} ${initialBytes} ${i18n.t('english')})`;
         console.log('计数器初始化完成:', charCounter.textContent);
     } else {
         console.error('初始化时未找到计数器元素!');
@@ -104,7 +127,7 @@ async function encryptMessage() {
         console.log('获取到待加密文本长度:', textToEncrypt?.length);
 
         if (!publicKeyArmored || !textToEncrypt) {
-            alert('请填写公钥和要加密的文本！');
+            alert(i18n.t('fillPublicKeyAndText'));
             return;
         }
 
@@ -124,7 +147,7 @@ async function encryptMessage() {
     } catch (error) {
         console.error('加密过程错误:', error);
         console.error('错误堆栈:', error.stack);
-        alert('加密失败：' + error.message);
+        alert(i18n.t('encryptFailed') + error.message);
     }
 }
 
@@ -140,7 +163,7 @@ async function decryptMessage() {
         const encryptedText = document.getElementById('decryptText').value;
 
         if (!privateKeyArmored || !encryptedText) {
-            alert('请填写私钥和要解密的文本！');
+            alert(i18n.t('fillPrivateKeyAndText'));
             return;
         }
 
@@ -183,7 +206,7 @@ async function decryptMessage() {
         document.getElementById('decryptResult').value = decrypted;
     } catch (error) {
         console.error('解密过程错误:', error);
-        alert('解密失败：' + error.message);
+        alert(i18n.t('decryptFailed') + error.message);
     }
 }
 
@@ -196,14 +219,14 @@ async function generateKeyPair() {
         const passphrase = document.getElementById('genPassphrase').value;
 
         if (!name || !email) {
-            alert('请填写姓名和邮箱！');
+            alert(i18n.t('fillNameEmail'));
             return;
         }
 
         // 显示加载提示
         const generateButton = document.querySelector('#generate button');
         generateButton.disabled = true;
-        generateButton.textContent = '正在生成密钥对...';
+        generateButton.textContent = i18n.t('generating');
 
         // 构建密钥生成选项
         const options = {
@@ -224,16 +247,17 @@ async function generateKeyPair() {
 
         // 恢复按钮状态
         generateButton.disabled = false;
-        generateButton.textContent = '生成密钥对';
+        generateButton.textContent = i18n.t('generateKeyBtn');
 
-        alert('密钥对生成成功！' + (passphrase ? '请务必保存好私钥和密码。' : '请务必保存好私钥。'));
+        alert(i18n.t('keyGenSuccess') + ' ' + 
+              (passphrase ? i18n.t('savePrivateKeyReminder') : i18n.t('savePrivateKeyReminderNoPass')));
     } catch (error) {
         console.error('生成密钥对失败:', error);
-        alert('生成密钥对失败：' + error.message);
+        alert(i18n.t('keyGenFailed') + error.message);
         // 恢复按钮状态
         const generateButton = document.querySelector('#generate button');
         generateButton.disabled = false;
-        generateButton.textContent = '生成密钥对';
+        generateButton.textContent = i18n.t('generateKeyBtn');
     }
 }
 
@@ -244,7 +268,7 @@ function saveKey(type) {
         const email = document.getElementById('email').value;
         
         if (!name || !email) {
-            alert('请确保已填写姓名和邮箱！');
+            alert(i18n.t('fillNameEmail'));
             return;
         }
 
@@ -260,7 +284,7 @@ function saveKey(type) {
         }
 
         if (!content) {
-            alert('没有可保存的密钥内容！');
+            alert(i18n.t('noContent'));
             return;
         }
 
@@ -281,9 +305,12 @@ function saveKey(type) {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         
-        alert(`${type === 'public' ? '公钥' : '私钥'}已保存为：${filename}`);
+        alert(i18n.t('keySaved', [
+            type === 'public' ? i18n.t('publicKeyText') : i18n.t('privateKeyText'),
+            filename
+        ]));
     } catch (error) {
-        alert('保存失败：' + error.message);
+        alert(i18n.t('saveFailed') + error.message);
     }
 }
 
@@ -294,7 +321,7 @@ async function copyText(elementId) {
         const text = textarea.value;
         
         if (!text) {
-            alert('没有可复制的内容！');
+            alert(i18n.t('noContent'));
             return;
         }
 
@@ -304,7 +331,7 @@ async function copyText(elementId) {
         // 更新按钮状态
         const button = event.target;
         const originalText = button.textContent;
-        button.textContent = '已复制！';
+        button.textContent = i18n.t('copied');
         button.classList.add('success');
         
         // 2秒后恢复按钮状态
@@ -314,7 +341,7 @@ async function copyText(elementId) {
         }, 2000);
         
     } catch (error) {
-        alert('复制失败：' + error.message);
+        alert(i18n.t('copyFailed') + error.message);
     }
 }
 
@@ -368,7 +395,7 @@ async function generateQR(sourceId) {
         console.log('获取到的文本长度:', text?.length);
         
         if (!text) {
-            alert('没有可生成二维码的内容！');
+            alert(i18n.t('noQRContent'));
             return;
         }
         
@@ -376,10 +403,10 @@ async function generateQR(sourceId) {
         console.log('文本字节长度:', byteLength);
         
         if (byteLength > MAX_QR_BYTES) {
-            alert(`文本长度超过限制！\n` +
-                  `当前长度：${byteLength} 字节\n` +
-                  `最大限制：${MAX_QR_BYTES} 字节\n` +
-                  `请减少文本内容后重试。`);
+            alert(`${i18n.t('textTooLong')}\n` +
+                  `${i18n.t('currentLength')} ${byteLength} ${i18n.t('bytes')}\n` +
+                  `${i18n.t('maxLimit')} ${MAX_QR_BYTES} ${i18n.t('bytes')}\n` +
+                  `${i18n.t('reduceText')}`);
             return;
         }
 
@@ -402,7 +429,7 @@ async function generateQR(sourceId) {
     } catch (error) {
         console.error('二维码生成详细错误:', error);
         console.error('错误堆栈:', error.stack);
-        alert('生成二维码失败：' + error.message);
+        alert(i18n.t('qrGenFailed') + error.message);
     }
 }
 
@@ -445,14 +472,14 @@ function startQRScanner() {
         console.log('二维码扫描成功:', decodedText);
         document.getElementById('decryptText').value = decodedText;
         html5QrcodeScanner.clear();
-        alert('二维码扫描成功！');
+        alert(i18n.t('qrScanSuccess'));
     }, (errorMessage) => {
         // 保持静默，避免频繁报错
         console.log('扫描中...', errorMessage);
     })
     .catch(err => {
         console.error('扫描器初始化失败:', err);
-        alert('初始化扫描器失败，请确保允许使用摄像头并使用 HTTPS 或本地服务器。');
+        alert(i18n.t('scanInitFailed'));
     });
 }
 

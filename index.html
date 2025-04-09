@@ -5,38 +5,130 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>工具导航</title>
     <style>
+        :root {
+            --primary-color: #0077ff;
+            --hover-color: #0066cc;
+            --bg-color: #0a0e17;
+            --text-color: #ffffff;
+        }
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
             text-align: center;
+            background-color: var(--bg-color);
+            color: var(--text-color);
         }
         .nav-container {
             display: flex;
             justify-content: center;
             gap: 20px;
             margin-top: 50px;
+            flex-wrap: wrap;
         }
         .nav-button {
             padding: 15px 30px;
             font-size: 18px;
-            background-color: #4CAF50;
+            background-color: var(--primary-color);
             color: white;
             text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 119, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .nav-button:hover {
-            background-color: #45a049;
+            background-color: var(--hover-color);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 119, 255, 0.4);
+        }
+        header {
+            margin-bottom: 30px;
+            position: relative;
+        }
+        h1 {
+            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 2.5rem;
+            text-shadow: 0 0 15px rgba(0, 119, 255, 0.5);
+        }
+        .language-switch {
+            position: absolute;
+            top: 0;
+            right: 0;
+            cursor: pointer;
+            padding: 8px 12px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .language-switch:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+        }
+        .glow-effect {
+            animation: glow 2s infinite alternate;
+        }
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px #0077ff, 0 0 10px #0077ff;
+            }
+            to {
+                text-shadow: 0 0 10px #0077ff, 0 0 20px #0077ff;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>安全工具导航</h1>
+    <header>
+        <div id="langSwitch" class="language-switch" onclick="toggleLanguage()">English</div>
+        <h1 class="glow-effect" id="title">安全工具导航</h1>
+        <p class="subtitle" id="subtitle">为您的安全需求提供便捷工具</p>
+    </header>
     <div class="nav-container">
-        <a href="public/gpg/index.html" class="nav-button">GPG加密解密工具</a>
-        <a href="public/otp/index.html" class="nav-button">实时OTP验证器</a>
+        <a href="public/gpg/index.html" class="nav-button" id="gpgTool">GPG加密解密工具</a>
+        <a href="public/otp/index.html" class="nav-button" id="otpTool">实时OTP验证器</a>
     </div>
+
+    <script>
+        let currentLang = 'zh';
+        
+        const translations = {
+            zh: {
+                title: "安全工具导航",
+                subtitle: "为您的安全需求提供便捷工具",
+                gpgTool: "GPG加密解密工具",
+                otpTool: "实时OTP验证器",
+                langSwitch: "English"
+            },
+            en: {
+                title: "Security Tools Hub",
+                subtitle: "Convenient tools for your security needs",
+                gpgTool: "GPG Encryption/Decryption Tool",
+                otpTool: "Real-time OTP Authenticator",
+                langSwitch: "中文"
+            }
+        };
+        
+        function toggleLanguage() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            updateContent();
+        }
+        
+        function updateContent() {
+            document.getElementById('title').textContent = translations[currentLang].title;
+            document.getElementById('subtitle').textContent = translations[currentLang].subtitle;
+            document.getElementById('gpgTool').textContent = translations[currentLang].gpgTool;
+            document.getElementById('otpTool').textContent = translations[currentLang].otpTool;
+            document.getElementById('langSwitch').textContent = translations[currentLang].langSwitch;
+            document.documentElement.lang = currentLang;
+        }
+    </script>
 </body>
 </html>
