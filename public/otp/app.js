@@ -17,6 +17,9 @@ class OTPValidator {
             this.bindEvents();
             this.initializeScanner();
             this.startOTPUpdateTimer();
+            
+            // 初始化国际化支持
+            this.initI18n();
         } catch (error) {
             console.error('构造函数执行出错:', error);
             throw error; // 向上传递错误
@@ -41,7 +44,10 @@ class OTPValidator {
                 userString2Input: 'userString2',
                 userKeyInput: 'userKey',
                 toggleSecretKeyBtn: 'toggleSecretKey',
-                toggleRawSecretBtn: 'toggleRawSecret'
+                toggleRawSecretBtn: 'toggleRawSecret',
+                // 添加语言切换按钮
+                langZhBtn: 'langZh',
+                langEnBtn: 'langEn'
             };
 
             // 检查每个元素
@@ -67,6 +73,51 @@ class OTPValidator {
         } catch (error) {
             console.error('初始化元素时出错:', error);
             return false;
+        }
+    }
+
+    // 初始化国际化支持
+    initI18n() {
+        try {
+            // 检查是否加载了 i18n 库
+            if (typeof window.i18n === 'undefined') {
+                console.error('国际化库未加载');
+                return;
+            }
+            
+            // 绑定语言切换按钮事件
+            this.langZhBtn.addEventListener('click', () => {
+                window.i18n.setLanguage('zh-CN');
+                this.updateLanguageButtonState('zh-CN');
+            });
+            
+            this.langEnBtn.addEventListener('click', () => {
+                window.i18n.setLanguage('en-US');
+                this.updateLanguageButtonState('en-US');
+            });
+            
+            // 初始更新语言
+            window.i18n.updatePageLanguage();
+            this.updateLanguageButtonState(window.i18n.getCurrentLang());
+            
+            console.log('国际化支持初始化完成');
+        } catch (error) {
+            console.error('初始化国际化支持时出错:', error);
+        }
+    }
+    
+    // 更新语言切换按钮状态
+    updateLanguageButtonState(lang) {
+        // 移除所有语言按钮的活动状态
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // 根据当前语言设置活动按钮
+        if (lang === 'zh-CN' && this.langZhBtn) {
+            this.langZhBtn.classList.add('active');
+        } else if (lang === 'en-US' && this.langEnBtn) {
+            this.langEnBtn.classList.add('active');
         }
     }
 
@@ -116,25 +167,25 @@ class OTPValidator {
                     // 主要绑定到userKey的输入状态
                     if (hasUserKey && (hasString1 || hasString2)) {
                         // 同时有密钥和用户名输入
-                        this.generateRawSecretBtn.textContent = '用密钥和用户名生成';
+                        this.generateRawSecretBtn.textContent = window.i18n.t('keyWithNames');
                         this.generateRawSecretBtn.classList.add('ready');
                         this.generateRawSecretBtn.classList.add('key-ready');
                         this.generateRawSecretBtn.disabled = false;
                     } else if (hasUserKey) {
                         // 只有密钥输入
-                        this.generateRawSecretBtn.textContent = '使用密钥生成';
+                        this.generateRawSecretBtn.textContent = window.i18n.t('keyOnly');
                         this.generateRawSecretBtn.classList.add('ready');
                         this.generateRawSecretBtn.classList.add('key-ready');
                         this.generateRawSecretBtn.disabled = false;
                     } else if (hasString1 || hasString2) {
                         // 如果只有用户名输入，也可以生成，但样式不同
-                        this.generateRawSecretBtn.textContent = '使用用户名生成';
+                        this.generateRawSecretBtn.textContent = window.i18n.t('namesOnly');
                         this.generateRawSecretBtn.classList.add('ready');
                         this.generateRawSecretBtn.classList.remove('key-ready');
                         this.generateRawSecretBtn.disabled = false;
                     } else {
                         // 没有任何输入
-                        this.generateRawSecretBtn.textContent = '生成密钥';
+                        this.generateRawSecretBtn.textContent = window.i18n.t('generateSecretBtn');
                         this.generateRawSecretBtn.classList.remove('ready');
                         this.generateRawSecretBtn.classList.remove('key-ready');
                         // 修改：当没有任何输入时禁用按钮
@@ -472,14 +523,16 @@ class OTPValidator {
             console.log('处理后的密钥:', processedSecret);
 
             try {
-                // 使用 HMAC-SHA1 计算
-                const shaObj = new jsSHA("SHA-1", "HEX");
+                // 使用 HMAC-SHA256 计算
+                const shaObj = new jsSHA("SHA-256", "HEX");
                 shaObj.setHMACKey(processedSecret, "HEX");
                 shaObj.update(timeHex);
                 const hmac = shaObj.getHMAC("HEX");
                 console.log('HMAC 结果:', hmac);
                 
+                // 由于使用 SHA-256，hmac 长度会更长，我们仍然使用最后一个字节作为偏移量
                 const offset = parseInt(hmac.substring(hmac.length - 1), 16);
+                // 从偏移量开始取8个字符（4字节）
                 const otp = (parseInt(hmac.substr(offset * 2, 8), 16) & 0x7fffffff) % 1000000;
                 
                 this.otpCodeSpan.textContent = otp.toString().padStart(6, '0');
@@ -616,7 +669,7 @@ class OTPValidator {
 
             // 添加扫描按钮
             const scanButton = document.createElement('button');
-            scanButton.textContent = '开启扫描';
+            scanButton.textContent = window.i18n.t('scanBtn');
             scanButton.id = 'scanButton';
             scanButton.className = 'scan-button';
             scannerSection.insertBefore(scanButton, scannerSection.firstChild);
@@ -663,7 +716,7 @@ class OTPValidator {
             // 更改按钮状态
             const scanButton = document.getElementById('scanButton');
             if (scanButton) {
-                scanButton.textContent = '关闭扫描';
+                scanButton.textContent = window.i18n.t('closeScanBtn');
                 scanButton.classList.add('scanning');
             }
 
@@ -681,7 +734,7 @@ class OTPValidator {
                 scanResult.className = 'scan-result';
                 document.querySelector('.scanner-section').appendChild(scanResult);
             }
-            scanResult.textContent = '准备扫描...';
+            scanResult.textContent = window.i18n.t('scanReady');
             scanResult.style.color = '#666';
 
             try {
@@ -712,7 +765,7 @@ class OTPValidator {
                             }
                         ).catch(err => {
                             console.error('启动扫描器失败:', err);
-                            scanResult.textContent = '启动相机失败，请检查权限设置';
+                            scanResult.textContent = window.i18n.t('scanCameraFailed');
                             scanResult.style.color = '#f44336';
                             scanResult.className = 'scan-result error';
                         });
@@ -724,7 +777,7 @@ class OTPValidator {
                     }
                 }).catch(err => {
                     console.error('获取相机失败:', err);
-                    scanResult.textContent = '无法访问相机，请检查权限设置';
+                    scanResult.textContent = window.i18n.t('scanCameraAccess');
                     scanResult.style.color = '#f44336';
                     scanResult.className = 'scan-result error';
                     this.resetScannerState();
@@ -734,7 +787,7 @@ class OTPValidator {
                 this.resetScannerState();
                 
                 if (scanResult) {
-                    scanResult.textContent = '启动扫描器失败: ' + error.message;
+                    scanResult.textContent = window.i18n.t('scannerFailed') + ': ' + error.message;
                     scanResult.style.color = '#f44336';
                     scanResult.className = 'scan-result error';
                 }
@@ -775,7 +828,7 @@ class OTPValidator {
         // 重置按钮状态
         const scanButton = document.getElementById('scanButton');
         if (scanButton) {
-            scanButton.textContent = '开启扫描';
+            scanButton.textContent = window.i18n.t('scanBtn');
             scanButton.classList.remove('scanning');
         }
         
@@ -813,7 +866,7 @@ class OTPValidator {
             // 验证扫描结果是否与当前 OTP 匹配
             if (result === currentOTP) {
                 if (scanResult) {
-                    scanResult.textContent = '验证成功！扫描结果与 OTP 码匹配';
+                    scanResult.textContent = window.i18n.t('scanSuccess');
                     scanResult.style.color = '#4CAF50';
                     scanResult.className = 'scan-result success';
                 }
@@ -830,14 +883,14 @@ class OTPValidator {
                 if (this.lastScanSuccess && (secondsInPeriod >= 9 || secondsInPeriod <= 0)) {
                     // 保持成功状态
                     if (scanResult) {
-                        scanResult.textContent = '验证成功！扫描结果与 OTP 码匹配';
+                        scanResult.textContent = window.i18n.t('scanSuccess');
                         scanResult.style.color = '#4CAF50';
                         scanResult.className = 'scan-result success';
                     }
                 } else {
                     // 不在容差时间内，显示二维码不正确
                     if (scanResult) {
-                        scanResult.textContent = '二维码不正确，请使用正确的 OTP 码';
+                        scanResult.textContent = window.i18n.t('scanFailure');
                         scanResult.style.color = '#f44336';
                         scanResult.className = 'scan-result error';
                     }
@@ -872,7 +925,7 @@ class OTPValidator {
                 if (timeSinceLastScan > 1000 && !(secondsInPeriod >= 9 || secondsInPeriod <= 0)) {
                     // 更新为"未检测到"状态
                     if (scanResult) {
-                        scanResult.textContent = '二维码已移开，请重新对准摄像头';
+                        scanResult.textContent = window.i18n.t('scanMoved');
                         scanResult.style.color = '#f44336';
                         scanResult.className = 'scan-result warning';
                     }
@@ -884,7 +937,7 @@ class OTPValidator {
                 // 如果超过200毫秒没有新扫描结果，显示未检测到
                 if (!this.lastScanTime || (now - this.lastScanTime > 200)) {
                     if (scanResult) {
-                        scanResult.textContent = '未检测到二维码，请对准摄像头';
+                        scanResult.textContent = window.i18n.t('scanNotDetected');
                         scanResult.style.color = '#f44336';
                         scanResult.className = 'scan-result error';
                     }
@@ -1009,13 +1062,13 @@ class OTPValidator {
                         
                         // 对每个用户名分别计算哈希，然后合并哈希结果
                         for (const name of names) {
-                            const shaObj = new jsSHA("SHA-1", "TEXT");
+                            const shaObj = new jsSHA("SHA-256", "TEXT");
                             shaObj.update(name);
                             const nameHash = shaObj.getHash("HEX");
                             console.log(`用户名 "${name}" 的哈希:`, nameHash);
                             
-                            // 将哈希转换为字节数组
-                            const nameHashBytes = new Uint8Array(nameHash.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                            // 将哈希转换为字节数组 - 由于 SHA-256 产生 32 字节，我们取前 20 字节保持兼容性
+                            const nameHashBytes = new Uint8Array(nameHash.match(/.{1,2}/g).slice(0, 20).map(byte => parseInt(byte, 16)));
                             
                             // 合并到输入中
                             if (combinedInput.length === 0) {
@@ -1046,15 +1099,15 @@ class OTPValidator {
             // 如果有自定义密钥，添加到计算中
             if (userKey) {
                 hasKeyInput = true;
-                // 使用SHA-1哈希自定义密钥，确保它提供一个良好的熵源
+                // 使用SHA-256哈希自定义密钥，确保它提供一个良好的熵源
                 try {
-                    const shaObj = new jsSHA("SHA-1", "TEXT");
+                    const shaObj = new jsSHA("SHA-256", "TEXT");
                     shaObj.update(userKey);
                     const keyHash = shaObj.getHash("HEX");
                     console.log('密钥哈希:', keyHash);
                     
-                    // 将哈希转换为字节数组
-                    const keyHashBytes = new Uint8Array(keyHash.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                    // 将哈希转换为字节数组 - 取前20字节保持兼容性
+                    const keyHashBytes = new Uint8Array(keyHash.match(/.{1,2}/g).slice(0, 20).map(byte => parseInt(byte, 16)));
                     console.log('密钥哈希字节:', Array.from(keyHashBytes));
                     
                     // 合并到输入中 - 使用异或以便与用户名结合
@@ -1089,20 +1142,20 @@ class OTPValidator {
                 window.crypto.getRandomValues(finalBytes);
                 console.log('生成的完全随机字节:', Array.from(finalBytes));
             } else {
-                // 使用SHA-1哈希合并的输入生成最终密钥
+                // 使用SHA-256哈希合并的输入生成最终密钥
                 try {
                     // 使用jsSHA库
                     const inputHex = Array.from(combinedInput)
                         .map(byte => byte.toString(16).padStart(2, '0'))
                         .join('');
                     
-                    const shaObj = new jsSHA("SHA-1", "HEX");
+                    const shaObj = new jsSHA("SHA-256", "HEX");
                     shaObj.update(inputHex);
                     const hash = shaObj.getHash("HEX");
                     console.log('最终密钥哈希:', hash);
                     
-                    // 将哈希转换为字节数组
-                    finalBytes = new Uint8Array(hash.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                    // 将哈希转换为字节数组 - 取前20字节保持兼容性
+                    finalBytes = new Uint8Array(hash.match(/.{1,2}/g).slice(0, 20).map(byte => parseInt(byte, 16)));
                 } catch (error) {
                     console.error('生成最终密钥哈希时出错:', error);
                     
@@ -1140,11 +1193,8 @@ class OTPValidator {
             // 显示密钥已生成的消息而不是实际密钥
             this.rawSecretDisplay.style.display = 'block';
             
-            // 简化消息，不显示具体参与计算的内容
-            let messageText = '验证码已生成';
-            
-            // 设置消息并隐藏实际密钥
-            this.rawSecretSpan.textContent = messageText;
+            // 使用国际化消息
+            this.rawSecretSpan.textContent = window.i18n.t('secretGenerated');
             this.rawSecretSpan.classList.remove('password-hidden');
             if (this.toggleRawSecretBtn) {
                 this.toggleRawSecretBtn.style.display = 'none'; // 隐藏切换按钮
@@ -1285,7 +1335,7 @@ class OTPValidator {
                 second: '2-digit',
                 hour12: false 
             });
-            timestampSpan.textContent = `（北京时间）${dateString} ${timeString}`;
+            timestampSpan.textContent = `${window.i18n.t('beijingTime')}${dateString} ${timeString}`;
             
         } catch (error) {
             console.error('更新倒计时显示时出错:', error);

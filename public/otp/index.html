@@ -10,29 +10,37 @@
     <script src="js/lib/html5-qrcode.min.js"></script>
     <script src="js/lib/sha.js"></script>
     
+    <!-- 添加国际化支持 -->
+    <script src="js/i18n/lang.js"></script>
+    
     <link rel="stylesheet" href="styles.css">
     <script src="app.js" defer></script>
 
 </head>
 <body>
     <div class="container">
-        <h1>实时OTP验证器</h1>
+        <div class="language-switcher">
+            <button id="langZh" class="lang-btn active">中文</button>
+            <button id="langEn" class="lang-btn">English</button>
+        </div>
+        
+        <h1 data-i18n="title">实时OTP验证器</h1>
         
         <!-- 用户输入部分 -->
         <div class="user-input-section">
             <div class="input-group">
-                <input type="text" id="userString1" placeholder="己方用户名">
-                <input type="text" id="userString2" placeholder="对方用户名">
-                <input type="password" id="userKey" placeholder="密钥">
+                <input type="text" id="userString1" placeholder="己方用户名" data-i18n="userString1">
+                <input type="text" id="userString2" placeholder="对方用户名" data-i18n="userString2">
+                <input type="password" id="userKey" placeholder="密钥" data-i18n="userKey">
             </div>
         </div>
         
         <!-- 密钥生成部分 -->
         <div class="secret-section">
-            <button id="generateRawSecret">生成密钥</button>
+            <button id="generateRawSecret" data-i18n="generateSecretBtn">生成密钥</button>
             <div class="secret-display" id="rawSecretDisplay" style="display: none;">
                 <div class="secret-message">
-                    <span id="rawSecret" class="secret-text"></span>
+                    <span id="rawSecret" class="secret-text" data-i18n="secretGenerated"></span>
                     <button type="button" class="toggle-password" id="toggleRawSecret" style="display: none;">👁️</button>
                 </div>
                 <!-- 注释掉复制密钥按钮 
@@ -44,15 +52,15 @@
         <!-- OTP 输入和生成部分 -->
         <div class="input-section">
             <div class="password-container" style="display: none;">
-                <input type="password" id="secretKey" placeholder="输入 Base32 格式的密钥">
+                <input type="password" id="secretKey" placeholder="输入 Base32 格式的密钥" data-i18n="inputKey">
                 <button type="button" class="toggle-password" id="toggleSecretKey">👁️</button>
             </div>
-            <button id="generateOTP">生成 OTP</button>
-            <button id="generateQR">生成二维码</button>
+            <button id="generateOTP" data-i18n="generateOTPBtn">生成 OTP</button>
+            <button id="generateQR" data-i18n="generateQRBtn">生成二维码</button>
         </div>
 
         <div class="display-section">
-            <div id="otpDisplay">当前 OTP: <span id="otpCode"></span></div>
+            <div id="otpDisplay"><span data-i18n="otpDisplay">当前 OTP</span>: <span id="otpCode"></span></div>
             <div id="qrCanvas" class="qr-container"></div>
         </div>
 
